@@ -35,10 +35,10 @@ filterOnResistance = function(data_mode, filtered_rows) {
 }
 
 # Data Loading
-resistance_rate_antibiotic = readr::read_rds("./zip_data_antibiotic_resistance_rate.Rds")
-resistance_rate_microbe = readr::read_rds("./zip_data_microbe_resistance_rate.Rds")
-test_rate_antibiotic = readr::read_rds("./zip_data_antibiotic_test_rate.Rds")
-test_rate_microbe = readr::read_rds("./zip_data_microbe_test_rate.Rds")
+resistance_rate_antibiotic = readr::read_rds("./data/dashboard_data/zip_data_antibiotic_resistance_rate.Rds")
+resistance_rate_microbe = readr::read_rds("./data/dashboard_data/zip_data_microbe_resistance_rate.Rds")
+test_rate_antibiotic = readr::read_rds("./data/dashboard_data/zip_data_antibiotic_test_rate.Rds")
+test_rate_microbe = readr::read_rds("./data/dashboard_data/zip_data_microbe_test_rate.Rds")
 
 data("df_pop_zip")
 valid_zips = df_pop_zip$region
