@@ -7,6 +7,8 @@ library(devtools)
 library(choroplethrZip)
 library(stringr)
 library(gsubfn)
+library(sf)
+library(spdep)
 
 expandZip3Level = function(zip, new_value) {
   if (identical(new_value, numeric(0))) new_value = 0
@@ -34,44 +36,90 @@ filterOnResistance = function(data_mode, filtered_rows) {
   output
 }
 
+setupPolygonWeights = function(polygons, data) {
+  geoms = c()
+  for (zip in unique(data$Zip)) {
+    expanded_zips = c()
+    
+    new_zip = as.numeric(paste(zip, "00", sep=""))
+    for (i in 0:99) {
+      if (as.character(new_zip + i) %in% polygons$ZIP_CODE) {
+        expanded_zips = append(expanded_zips, new_zip + i)
+      }
+    }
+    
+    all_zip_polygons = polygons[polygons$ZIP_CODE %in% expanded_zips,]
+    unioned_polygons = st_union(all_zip_polygons)
+    
+    geoms = append(geoms, unioned_polygons)
+  }
+  
+  neighbouring_polygons = poly2nb(geoms, queen=TRUE)
+  neighbouring_polygon_weights = nb2listw(neighbouring_polygons, style="W", zero.policy=TRUE)
+  
+  neighbouring_polygon_weights
+}
+
 # Data Loading
 resistance_rate_antibiotic = readr::read_rds("./data/dashboard_data/zip_data_antibiotic_resistance_rate.Rds")
 resistance_rate_microbe = readr::read_rds("./data/dashboard_data/zip_data_microbe_resistance_rate.Rds")
 test_rate_antibiotic = readr::read_rds("./data/dashboard_data/zip_data_antibiotic_test_rate.Rds")
 test_rate_microbe = readr::read_rds("./data/dashboard_data/zip_data_microbe_test_rate.Rds")
+spatial_autocorrelation = readr::read_rds("./data/dashboard_data/spatial_autocorrelation_data.Rds")
+polygons = st_read("./data/shapefiles/USA_ZIP_Code_Boundaries.shp")
 
 data("df_pop_zip")
 valid_zips = df_pop_zip$region
 
+autocorrelation_weights = setupPolygonWeights(polygons, spatial_autocorrelation)
+
 # Setting up R-Shiny Window
 ui <- fluidPage(
   titlePanel(title=h4("Location Analysis", align="center")),
-  sidebarPanel(h3("Resistance Rate Heatmap"),
-               radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
-               selectInput(
-                 "zip",
-                 "Zipcode Area:",
-                 c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
-                 multiple = TRUE,
-                 selected = "All"
-               ),
-               selectInput(
-                 "antibiotic",
-                 "Antibiotic:",
-                 c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
-               ),
-               selectInput(
-                 "microbe",
-                 "Microbe:",
-                 c("All", unique(resistance_rate_microbe$Microbe)),
-               ),
-               tags$head(
-                 tags$style(type="text/css", "form { height: 600px; }"),
-               )
+  fluidRow(
+    sidebarPanel(h3("Resistance Rate Heatmap"),
+                 radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
+                 selectInput(
+                   "zip",
+                   "Zipcode Area:",
+                   c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
+                   multiple = TRUE,
+                   selected = "All"
+                 ),
+                 selectInput(
+                   "antibiotic",
+                   "Antibiotic:",
+                   c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
+                 ),
+                 selectInput(
+                   "microbe",
+                   "Microbe:",
+                   c("All", unique(resistance_rate_microbe$Microbe)),
+                 ),
+                 tags$head(
+                   tags$style(type="text/css", "form { height: 500px; }"),
+                 )
+    ),
+    mainPanel(plotOutput("heatmap")),
   ),
-  mainPanel(plotOutput("heatmap"),
-            plotOutput("bars")
-  )
+  fluidRow(h3("Data Analysis")),
+  hr(),
+  fluidRow(
+    sidebarPanel(h3("Spatial Autocorrelation"),
+                 selectInput(
+                   "autocorrelation_microbe",
+                   "Microbe:",
+                   unique(spatial_autocorrelation$Microbe),
+                 ),
+                 tags$head(
+                   tags$style(type="text/css", "form { height: 500px; }"),
+                 )
+    ),
+    mainPanel(p(moranAnalysis()),
+              p(gearyAnalysis()),
+    ),
+  ),
+  fluidRow(h3("Conclusions")),
 )
 
 server <- function(input,output) {
@@ -217,6 +265,18 @@ server <- function(input,output) {
     df
   })
 
+  moranAnalysis = reactive({
+    print(moran.test(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, alternative="greater", zero.policy=TRUE))
+    mc = moran.mc(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
+    plot(mc, xlab="Moran's I")
+  })
+  
+  gearyAnalysis = reactive({
+    print(geary.test(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, alternative="greater", zero.policy=TRUE))
+    mc = geary.mc(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
+    plot(mc, xlab="Geary's C")
+  })
+  
   #~~~~~~~~~~~~~~~~~Define Plots~~~~~~~~~~~~~~~~~
   output$heatmap = renderPlot({
     if ("All" %in% input$zip) {
@@ -230,7 +290,7 @@ server <- function(input,output) {
                      zip_zoom = unique(df$region),
                      legend     = "Percentage of Resistant Tests")
     }
-  }, height = 600, width = 800)
+  }, height = 525, width = 750)
 }
 
 shinyApp(ui, server)
