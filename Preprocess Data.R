@@ -96,8 +96,8 @@ for (zip in unique(zip_data_antibiotic$Zip)) {
   }
 }
 
-readr::write_rds(zip_data_antibiotic, "./zip_data_antibiotic_resistance_rate.Rds")
-readr::write_rds(zip_data_microbe, "./zip_data_microbe_resistance_rate.Rds")
+readr::write_rds(zip_data_antibiotic, "./data/dashboard_data/zip_data_antibiotic_resistance_rate.Rds")
+readr::write_rds(zip_data_microbe, "./data/dashboard_data/zip_data_microbe_resistance_rate.Rds")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Processed Test Rate~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 zip_data_antibiotic = data.frame(
@@ -161,8 +161,8 @@ for (zip in unique(zip_data_antibiotic$Zip)) {
   }
 }
 
-readr::write_rds(zip_data_antibiotic, "./zip_data_antibiotic_test_rate.Rds")
-readr::write_rds(zip_data_microbe, "./zip_data_microbe_test_rate.Rds")
+readr::write_rds(zip_data_antibiotic, "./data/dashboard_data/zip_data_antibiotic_test_rate.Rds")
+readr::write_rds(zip_data_microbe, "./data/dashboard_data/zip_data_microbe_test_rate.Rds")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Processed Moran's I values~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 moran_data = data.frame(
@@ -181,4 +181,4 @@ for (zip in unique(data$zip_3_level)) {
   moran_data[nrow(moran_data) + 1,] = c(zip, resistance_count, num_tests, resistance_rate)
 }
 
-readr::write_rds(moran_data, "./pre_processed_moran_data.Rds")
+readr::write_rds(moran_data, "./data/dashboard_data/pre_processed_moran_data.Rds")

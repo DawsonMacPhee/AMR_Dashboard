@@ -3,8 +3,8 @@ remove(list=ls())
 library(sf)
 library(spdep)
 
-polygons = st_read("./shapefiles/USA_ZIP_Code_Boundaries.shp")
-data = readr::read_rds("./pre_processed_moran_data.Rds")
+polygons = st_read("./data/shapefiles/USA_ZIP_Code_Boundaries.shp")
+data = readr::read_rds("./data/dashboard_data/pre_processed_moran_data.Rds")
 
 geoms = c()
 for (zip in unique(data$Zip)) {
