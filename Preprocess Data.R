@@ -1,7 +1,7 @@
 remove(list=ls())
 
-tiers = read.csv("./drug_tiers.csv")
-data = read.csv("./data.csv")
+tiers = read.csv("./data/raw_data/drug_tiers.csv")
+data = read.csv("./data/raw_data/data.csv")
 data = subset(data, select = -c(FUSIDIC.ACID, CEFOPERAZONE))
 rownames(data) = NULL
 data[15:69][data[15:69] != 'R' & data[15:69] != 'S' & data[15:69] != 'I'] = NA
