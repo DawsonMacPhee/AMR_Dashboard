@@ -167,18 +167,23 @@ readr::write_rds(zip_data_microbe, "./data/dashboard_data/zip_data_microbe_test_
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Processed Moran's I values~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 moran_data = data.frame(
   Zip=character(),
-  ResistanceCount=integer(), 
-  NumTests=integer(), 
+  Microbe=character(),
+  ResistantCount=integer(), 
+  TestCount=integer(), 
   ResistanceRate=double(),
   stringsAsFactors=FALSE
 )
 for (zip in unique(data$zip_3_level)) {
-  num_r = get_multi_col_count(data[data$zip_3_level == zip,][15:69])
-  resistance_count = num_r$Freq[num_r$Var1 == "R"]
-  num_tests = sum(num_r$Freq)
-  resistance_rate = resistance_count / num_tests
-  
-  moran_data[nrow(moran_data) + 1,] = c(zip, resistance_count, num_tests, resistance_rate)
+  zip_rows = data[data$zip_3_level == zip,] # Get zipcode rows
+  for (microbe in unique(zip_rows$org_standard)) {
+    test_count = get_multi_col_count(data[data$zip_3_level == zip & data$org_standard == microbe,][15:69])
+    
+    num_tests = sum(test_count$Freq)
+    resistance_count = test_count$Freq[test_count$Var1 == "R"]
+    resistance_rate = resistance_count / num_tests
+    
+    moran_data[nrow(moran_data) + 1,] = c(zip, microbe, resistance_count, num_tests, resistance_rate)
+  }
 }
 
-readr::write_rds(moran_data, "./data/dashboard_data/pre_processed_moran_data.Rds")
+readr::write_rds(moran_data, "./data/dashboard_data/spatial_autocorrelation_data.Rds")
