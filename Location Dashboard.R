@@ -50,7 +50,8 @@ valid_zips = df_pop_zip$region
 
 # Setting up R-Shiny Window
 ui <- fluidPage(
-  titlePanel(title=h1("Location Analysis", align="center")),
+  titlePanel(title=h1("Are there Trends in Resistance Rates by Location?", align="center")),
+  hr(),
   fluidRow(
     sidebarPanel(id="heatmap",
                  h3("Resistance Rate Heatmap"),
@@ -73,7 +74,7 @@ ui <- fluidPage(
                    c("All", unique(resistance_rate_microbe$Microbe)),
                  ),
                  tags$head(
-                   tags$style(type="text/css", "#heatmap { height: 500px; }"),
+                   tags$style(type="text/css", "#heatmap { height: 500px; max-width: 350px; }"),
                  )
     ),
     mainPanel(plotOutput("heatmap")),
@@ -89,16 +90,18 @@ ui <- fluidPage(
                    unique(spatial_autocorrelation$Microbe),
                  ),
                  tags$head(
-                   tags$style(type="text/css", "#autocorrelation { height: 300px; }"),
+                   tags$style(type="text/css", "#autocorrelation { height: 375px; max-width: 350px; }"),
                  )
     ),
     mainPanel(fluidRow(
       column(6,
-          textOutput("moran"),
+          h4("Moran's I"),
+          htmlOutput("moran"),
           plotOutput("moranPlot"),
       ),
       column(6,
-          textOutput("geary"),
+          h4("Geary's C"),
+          htmlOutput("geary"),
           plotOutput("gearyPlot"),
       ),
     )),
@@ -250,7 +253,9 @@ server <- function(input,output) {
   })
 
   moranAnalysis = reactive({
-    moran.test(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, alternative="greater", zero.policy=TRUE)$estimate
+    test = moran.test(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, alternative="greater", zero.policy=TRUE)
+    
+    sprintf("I Statistic: %f<br>Hypothesis Test P-Value: %f<br><br>", test$estimate[1], test$p.value)
   })
   
   moranSimulation = reactive({
@@ -258,7 +263,9 @@ server <- function(input,output) {
   })
   
   gearyAnalysis = reactive({
-    geary.test(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, alternative="greater", zero.policy=TRUE)$estimate
+    test = geary.test(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, alternative="greater", zero.policy=TRUE)
+    
+    sprintf("C Statistic: %f<br>Hypothesis Test P-Value: %f<br><br>", test$estimate[1], test$p.value)
   })
   
   gearySimulation = reactive({
@@ -280,11 +287,14 @@ server <- function(input,output) {
     }
   }, height = 525, width = 750)
   
-  output$moran = renderText({ moranAnalysis() })
+  output$moran = renderUI({ HTML(moranAnalysis()) })
+  
   output$moranPlot = renderPlot({ 
     plot(moranSimulation(), xlab="Moran's I")
   }, height = 262, width = 375)
-  output$geary = renderText({ gearyAnalysis() })
+  
+  output$geary = renderUI({ HTML(gearyAnalysis()) })
+  
   output$gearyPlot = renderPlot({ 
     plot(gearySimulation(), xlab="Geary's C")
   }, height = 262, width = 375)
