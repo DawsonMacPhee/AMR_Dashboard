@@ -1,6 +1,9 @@
 remove(list=ls())
+library(sf)
+library(spdep)
 
 tiers = read.csv("./data/raw_data/drug_tiers.csv")
+polygons = st_read("./data/shapefiles/USA_ZIP_Code_Boundaries.shp")
 data = read.csv("./data/raw_data/data.csv")
 data = subset(data, select = -c(FUSIDIC.ACID, CEFOPERAZONE))
 rownames(data) = NULL
@@ -21,6 +24,30 @@ get_multi_col_count = function(frame) {
   }
   
   return (data.frame(Var1=c("R", "S", "I"), Freq=c(sum(r), sum(s), sum(i))))
+}
+
+setup_polygon_weights = function(polygons, data) {
+  geoms = c()
+  for (zip in unique(data$Zip)) {
+    expanded_zips = c()
+    
+    new_zip = as.numeric(paste(zip, "00", sep=""))
+    for (i in 0:99) {
+      if (as.character(new_zip + i) %in% polygons$ZIP_CODE) {
+        expanded_zips = append(expanded_zips, new_zip + i)
+      }
+    }
+    
+    all_zip_polygons = polygons[polygons$ZIP_CODE %in% expanded_zips,]
+    unioned_polygons = st_union(all_zip_polygons)
+    
+    geoms = append(geoms, unioned_polygons)
+  }
+  
+  neighbouring_polygons = poly2nb(geoms, queen=TRUE)
+  neighbouring_polygon_weights = nb2listw(neighbouring_polygons, style="W", zero.policy=TRUE)
+  
+  neighbouring_polygon_weights
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Processed Resistance Rate~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,7 +192,7 @@ readr::write_rds(zip_data_antibiotic, "./data/dashboard_data/zip_data_antibiotic
 readr::write_rds(zip_data_microbe, "./data/dashboard_data/zip_data_microbe_test_rate.Rds")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Processed Moran's I values~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-moran_data = data.frame(
+spatial_data = data.frame(
   Zip=character(),
   Microbe=character(),
   ResistantCount=integer(), 
@@ -173,17 +200,22 @@ moran_data = data.frame(
   ResistanceRate=double(),
   stringsAsFactors=FALSE
 )
+
 for (zip in unique(data$zip_3_level)) {
   zip_rows = data[data$zip_3_level == zip,] # Get zipcode rows
-  for (microbe in unique(zip_rows$org_standard)) {
+  for (microbe in c("E COLI", "STAPHYLOCOCCUS PSEUDINTERMEDIUS", "ENTEROCOCCUS FAECALIS")) {
     test_count = get_multi_col_count(data[data$zip_3_level == zip & data$org_standard == microbe,][15:69])
     
     num_tests = sum(test_count$Freq)
     resistance_count = test_count$Freq[test_count$Var1 == "R"]
     resistance_rate = resistance_count / num_tests
+    if (is.nan(resistance_rate)) resistance_rate = 0
     
-    moran_data[nrow(moran_data) + 1,] = c(zip, microbe, resistance_count, num_tests, resistance_rate)
+    spatial_data[nrow(spatial_data) + 1,] = c(zip, microbe, resistance_count, num_tests, resistance_rate)
   }
 }
 
-readr::write_rds(moran_data, "./data/dashboard_data/spatial_autocorrelation_data.Rds")
+weights = setup_polygon_weights(polygons, spatial_data)
+
+readr::write_rds(spatial_data, "./data/dashboard_data/spatial_autocorrelation_data.Rds")
+readr::write_rds(weights, "./data/dashboard_data/spatial_autocorrelation_weights.Rds")

@@ -36,48 +36,24 @@ filterOnResistance = function(data_mode, filtered_rows) {
   output
 }
 
-setupPolygonWeights = function(polygons, data) {
-  geoms = c()
-  for (zip in unique(data$Zip)) {
-    expanded_zips = c()
-    
-    new_zip = as.numeric(paste(zip, "00", sep=""))
-    for (i in 0:99) {
-      if (as.character(new_zip + i) %in% polygons$ZIP_CODE) {
-        expanded_zips = append(expanded_zips, new_zip + i)
-      }
-    }
-    
-    all_zip_polygons = polygons[polygons$ZIP_CODE %in% expanded_zips,]
-    unioned_polygons = st_union(all_zip_polygons)
-    
-    geoms = append(geoms, unioned_polygons)
-  }
-  
-  neighbouring_polygons = poly2nb(geoms, queen=TRUE)
-  neighbouring_polygon_weights = nb2listw(neighbouring_polygons, style="W", zero.policy=TRUE)
-  
-  neighbouring_polygon_weights
-}
-
 # Data Loading
-resistance_rate_antibiotic = readr::read_rds("./data/dashboard_data/zip_data_antibiotic_resistance_rate.Rds")
-resistance_rate_microbe = readr::read_rds("./data/dashboard_data/zip_data_microbe_resistance_rate.Rds")
-test_rate_antibiotic = readr::read_rds("./data/dashboard_data/zip_data_antibiotic_test_rate.Rds")
-test_rate_microbe = readr::read_rds("./data/dashboard_data/zip_data_microbe_test_rate.Rds")
-spatial_autocorrelation = readr::read_rds("./data/dashboard_data/spatial_autocorrelation_data.Rds")
-polygons = st_read("./data/shapefiles/USA_ZIP_Code_Boundaries.shp")
+resistance_rate_antibiotic = readRDS("./data/dashboard_data/zip_data_antibiotic_resistance_rate.Rds")
+resistance_rate_microbe = readRDS("./data/dashboard_data/zip_data_microbe_resistance_rate.Rds")
+test_rate_antibiotic = readRDS("./data/dashboard_data/zip_data_antibiotic_test_rate.Rds")
+test_rate_microbe = readRDS("./data/dashboard_data/zip_data_microbe_test_rate.Rds")
+
+spatial_autocorrelation = readRDS("./data/dashboard_data/spatial_autocorrelation_data.Rds")
+spatial_weights = readRDS("./data/dashboard_data/spatial_autocorrelation_weights.Rds")
 
 data("df_pop_zip")
 valid_zips = df_pop_zip$region
 
-autocorrelation_weights = setupPolygonWeights(polygons, spatial_autocorrelation)
-
 # Setting up R-Shiny Window
 ui <- fluidPage(
-  titlePanel(title=h4("Location Analysis", align="center")),
+  titlePanel(title=h1("Location Analysis", align="center")),
   fluidRow(
-    sidebarPanel(h3("Resistance Rate Heatmap"),
+    sidebarPanel(id="heatmap",
+                 h3("Resistance Rate Heatmap"),
                  radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
                  selectInput(
                    "zip",
@@ -97,7 +73,7 @@ ui <- fluidPage(
                    c("All", unique(resistance_rate_microbe$Microbe)),
                  ),
                  tags$head(
-                   tags$style(type="text/css", "form { height: 500px; }"),
+                   tags$style(type="text/css", "#heatmap { height: 500px; }"),
                  )
     ),
     mainPanel(plotOutput("heatmap")),
@@ -105,19 +81,27 @@ ui <- fluidPage(
   fluidRow(h3("Data Analysis")),
   hr(),
   fluidRow(
-    sidebarPanel(h3("Spatial Autocorrelation"),
+    sidebarPanel(id="autocorrelation",
+                 h3("Spatial Autocorrelation"),
                  selectInput(
                    "autocorrelation_microbe",
                    "Microbe:",
                    unique(spatial_autocorrelation$Microbe),
                  ),
                  tags$head(
-                   tags$style(type="text/css", "form { height: 500px; }"),
+                   tags$style(type="text/css", "#autocorrelation { height: 300px; }"),
                  )
     ),
-    mainPanel(p(moranAnalysis()),
-              p(gearyAnalysis()),
-    ),
+    mainPanel(fluidRow(
+      column(6,
+          textOutput("moran"),
+          plotOutput("moranPlot"),
+      ),
+      column(6,
+          textOutput("geary"),
+          plotOutput("gearyPlot"),
+      ),
+    )),
   ),
   fluidRow(h3("Conclusions")),
 )
@@ -266,15 +250,19 @@ server <- function(input,output) {
   })
 
   moranAnalysis = reactive({
-    print(moran.test(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, alternative="greater", zero.policy=TRUE))
-    mc = moran.mc(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
-    plot(mc, xlab="Moran's I")
+    moran.test(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, alternative="greater", zero.policy=TRUE)$estimate
+  })
+  
+  moranSimulation = reactive({
+    moran.mc(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
   })
   
   gearyAnalysis = reactive({
-    print(geary.test(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, alternative="greater", zero.policy=TRUE))
-    mc = geary.mc(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe], autocorrelation_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
-    plot(mc, xlab="Geary's C")
+    geary.test(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, alternative="greater", zero.policy=TRUE)$estimate
+  })
+  
+  gearySimulation = reactive({
+    geary.mc(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
   })
   
   #~~~~~~~~~~~~~~~~~Define Plots~~~~~~~~~~~~~~~~~
@@ -291,6 +279,15 @@ server <- function(input,output) {
                      legend     = "Percentage of Resistant Tests")
     }
   }, height = 525, width = 750)
+  
+  output$moran = renderText({ moranAnalysis() })
+  output$moranPlot = renderPlot({ 
+    plot(moranSimulation(), xlab="Moran's I")
+  }, height = 262, width = 375)
+  output$geary = renderText({ gearyAnalysis() })
+  output$gearyPlot = renderPlot({ 
+    plot(gearySimulation(), xlab="Geary's C")
+  }, height = 262, width = 375)
 }
 
 shinyApp(ui, server)
