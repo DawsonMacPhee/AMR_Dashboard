@@ -50,61 +50,72 @@ valid_zips = df_pop_zip$region
 
 # Setting up R-Shiny Window
 ui <- fluidPage(
+  tags$head(
+    tags$style(type="text/css", "#heatmap-container { max-width: 1250px; background-color: #FFEAE0; margin: auto; padding: 20px 20px 0px 20px; border-radius: 10px; overflow: auto; }"),
+    tags$style(type="text/css", "#heatmap { height: 525px; max-width: 350px; }"),
+    tags$style(type="text/css", "#heatmap-analysis-container { max-width: 1000px; background-color: #FFEAE0; margin: auto; padding: 0px 20px 15px 20px; border-radius: 10px; margin-top: 15px; }"),
+    tags$style(type="text/css", "#autocorrelation-sidebar { height: 375px; max-width: 350px; }"),
+    tags$style(type="text/css", "#autocorrelation-output { height: 375px;}"),
+  ),
   titlePanel(title=h1("Are there Trends in Resistance Rates by Location?", align="center")),
   hr(),
   fluidRow(
-    sidebarPanel(id="heatmap",
-                 h3("Resistance Rate Heatmap"),
-                 radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
-                 selectInput(
-                   "zip",
-                   "Zipcode Area:",
-                   c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
-                   multiple = TRUE,
-                   selected = "All"
-                 ),
-                 selectInput(
-                   "antibiotic",
-                   "Antibiotic:",
-                   c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
-                 ),
-                 selectInput(
-                   "microbe",
-                   "Microbe:",
-                   c("All", unique(resistance_rate_microbe$Microbe)),
-                 ),
-                 tags$head(
-                   tags$style(type="text/css", "#heatmap { height: 500px; max-width: 350px; }"),
-                 )
+    id="heatmap-container",
+    column(4,
+           id="heatmap",
+           class="well",
+           h3("Resistance Rate Heatmap"),
+           radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
+           selectInput(
+             "zip",
+             "Zipcode Area:",
+             c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
+             multiple = TRUE,
+             selected = "All"
+           ),
+           selectInput(
+             "antibiotic",
+             "Antibiotic:",
+             c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
+           ),
+           selectInput(
+             "microbe",
+             "Microbe:",
+             c("All", unique(resistance_rate_microbe$Microbe)),
+           ),
     ),
-    mainPanel(plotOutput("heatmap")),
+    column(8, plotOutput("heatmap")),
   ),
-  fluidRow(h3("Data Analysis")),
+  fluidRow(
+    id="heatmap-analysis-container",
+    h3("Data Analysis"),
+    p("The todo section here should discribe what the heatmap is doing and why it's important.")
+  ),
   hr(),
   fluidRow(
-    sidebarPanel(id="autocorrelation",
+    sidebarPanel(id="autocorrelation-sidebar",
                  h3("Spatial Autocorrelation"),
                  selectInput(
                    "autocorrelation_microbe",
                    "Microbe:",
                    unique(spatial_autocorrelation$Microbe),
                  ),
-                 tags$head(
-                   tags$style(type="text/css", "#autocorrelation { height: 375px; max-width: 350px; }"),
-                 )
     ),
-    mainPanel(fluidRow(
-      column(6,
-          h4("Moran's I"),
-          htmlOutput("moran"),
-          plotOutput("moranPlot"),
+    mainPanel(
+      id = "autocorrelation-output",
+      fluidRow(
+        column(6,
+            h4("Moran's I"),
+            htmlOutput("moran"),
+            plotOutput("moranPlot"),
+        ),
+        column(6,
+            h4("Geary's C"),
+            htmlOutput("geary"),
+            plotOutput("gearyPlot"),
+        ),
       ),
-      column(6,
-          h4("Geary's C"),
-          htmlOutput("geary"),
-          plotOutput("gearyPlot"),
-      ),
-    )),
+    ),
   ),
   fluidRow(h3("Conclusions")),
 )
@@ -277,15 +288,25 @@ server <- function(input,output) {
     if ("All" %in% input$zip) {
       zip_choropleth(heatmapData(), 
                      state_zoom = "new york", 
-                     legend     = "Percentage of Resistant Tests")
+                     legend     = "Percentage of Resistant Tests") + 
+        theme(
+          plot.background = element_rect(fill="#FFEAE0", color="#FFEAE0"),
+          text = element_text(size=15),
+          panel.border = element_blank()
+        )
     } else {
       df = heatmapData()
       zip_choropleth(df,
                      state_zoom = "new york", 
                      zip_zoom = unique(df$region),
-                     legend     = "Percentage of Resistant Tests")
+                     legend     = "Percentage of Resistant Tests") + 
+        theme(
+          plot.background = element_rect(fill="#FFEAE0", color="#FFEAE0"),
+          text = element_text(size=15),
+          panel.border = element_blank()
+        )
     }
-  }, height = 525, width = 750)
+  }, height = 486, width = 800)
   
   output$moran = renderUI({ HTML(moranAnalysis()) })
   
