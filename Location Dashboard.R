@@ -160,8 +160,19 @@ ui <- fluidPage(
       HTML("
         <p>
           The heatmap on its own is a cool way to view and explore the data, but it doesn't really give us a definitive answer as to 
-          whether AMR is spreading or not. For this, we're using two spatial autocorrelation methods -- Moran's I and Geary's C.
+          whether AMR is spreading or not. For this, we're using two spatial autocorrelation methods -- Moran's I and Geary's C. Moran's I 
+          is better for linear data, while Gearcy's C is better for non-linear. By implementing both we will improve our results and analysis. To 
+          calculate these values, we take the resistance rate of each zipcode, and compare it to each of its neighbouring zipcodes. Then, 
+          we generate weight values that represents the relationship between a zipcode and each of its neighbouring areas. Those weight values are 
+          used in two different formulas to calculate an I and C value that represents the entire state.
         </p>
+        <!--IMAGE OF FORMULAS-->
+        <p>
+          These algorithms are all about the comparison of correlated data and random data. See the number lines below to understand what the I and C 
+          values actually mean. The are very similar at their core, but shifted and inverted compared to eachother. The more extreme the I and C values get, 
+          the greater the likelihood of a positive or negative correlation actually existing in thge data.
+        </p>
+        <!--IMAGE OF NUMBER LINES-->
         <p>
           Above, you're able to run these spatial autocorrelation algorithms for the top 3 microbes with the most tests in the state of New York. 
           Given your new found knowledge in this matter, you will probably notice that none of these I or C values suggest any significant 
