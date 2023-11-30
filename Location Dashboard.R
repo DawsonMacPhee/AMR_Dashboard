@@ -51,82 +51,94 @@ valid_zips = df_pop_zip$region
 
 #~~~~~~~~~~~~~~~~~Setting up R-Shiny UI~~~~~~~~~~~~~~~~~
 ui <- fluidPage(
+  # CSS Definitions
   tags$head(
-    tags$style(type="text/css", "#heatmap-container { max-width: 1250px; background-color: #FFEAE0; margin: auto; padding: 20px 20px 0px 20px; border-radius: 10px; overflow: auto; }"),
+    tags$style(type="text/css", "#heatmap-container { max-width: 1170px; overflow: auto; background-color: #FFEAE0; margin: auto; border-radius: 10px; }"),
+    tags$style(type="text/css", "#heatmap-content { display: flex; justify-content: center; width: 1170px; padding: 20px 20px 0px 20px; }"),
     tags$style(type="text/css", "#heatmap-sidebar { height: 525px; max-width: 350px; }"),
-    tags$style(type="text/css", "#heatmap-analysis { max-width: 1000px; background-color: #FFEAE0; margin: auto; padding: 0px 20px 15px 20px; border-radius: 10px; margin-top: 15px; }"),
-    tags$style(type="text/css", "#autocorrelation-container { max-width: 1250px; background-color: #E0F5FF; margin: auto; padding: 20px 20px 0px 20px; border-radius: 10px; overflow: auto; }"),
+    tags$style(type="text/css", "#heatmap-output { width: 800px; }"),
+    tags$style(type="text/css", "#heatmap-analysis { max-width: 1000px; background-color: #FFEAE0; margin: auto; margin-top: 15px; padding: 0px 20px 15px 20px; border-radius: 10px; }"),
+    tags$style(type="text/css", "#autocorrelation-container { max-width: 1124px; overflow: auto; background-color: #E0F5FF; margin: auto; border-radius: 10px; }"),
+    tags$style(type="text/css", "#autocorrelation-content { display: flex; justify-content: center; width: 1124px; padding: 20px 10px 0px 20px; }"),
     tags$style(type="text/css", "#autocorrelation-sidebar { height: 375px; max-width: 350px; }"),
-    tags$style(type="text/css", "#autocorrelation-output { height: 375px; overflow: hidden; margin-left: 35px; }"),
-    tags$style(type="text/css", "#autocorrelation-analysis { max-width: 1000px; background-color: #E0F5FF; margin: auto; margin-bottom: 40px; padding: 0px 20px 15px 20px; border-radius: 10px; margin-top: 15px; }"),
+    tags$style(type="text/css", "#autocorrelation-output { display: flex; height: 375px; margin-left: 10px; }"),
+    tags$style(type="text/css", ".autocorrelation-display { overflow: hidden; padding-left: 10px; padding-right: 10px; width: 395px; }"),
+    tags$style(type="text/css", "#autocorrelation-analysis { max-width: 1000px; background-color: #E0F5FF; margin: auto; margin-bottom: 40px; margin-top: 15px; padding: 0px 20px 15px 20px; border-radius: 10px; }"),
   ),
   titlePanel(title=h1("Are there Trends in Resistance Rates by Location?", align="center")),
   hr(),
-  fluidRow(
-    id="heatmap-container",
-    column(4,
-           id="heatmap-sidebar",
-           class="well",
-           h3("Resistance Rate Heatmap"),
-           radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
-           selectInput(
-             "zip",
-             "Zipcode Area:",
-             c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
-             multiple = TRUE,
-             selected = "All"
-           ),
-           selectInput(
-             "antibiotic",
-             "Antibiotic:",
-             c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
-           ),
-           selectInput(
-             "microbe",
-             "Microbe:",
-             c("All", unique(resistance_rate_microbe$Microbe)),
-           ),
+  
+  # Heatmap UI
+  div(id="heatmap-container",
+    div(id="heatmap-content",
+      div(id="heatmap-sidebar", class="well",
+        h3("Resistance Rate Heatmap"),
+        radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
+        selectInput(
+          "zip",
+          "Zipcode Area:",
+          c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
+          multiple = TRUE,
+          selected = "All"
+        ),
+        selectInput(
+          "antibiotic",
+          "Antibiotic:",
+          c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
+        ),
+        selectInput(
+          "microbe",
+          "Microbe:",
+          c("All", unique(resistance_rate_microbe$Microbe)),
+        ),
+      ),
+      div(id="heatmap-output", plotOutput("heatmap")),
     ),
-    column(8, plotOutput("heatmap")),
   ),
-  fluidRow(
-    id="heatmap-analysis",
-    h3("Data Analysis"),
-    p("The todo section here should describe what the heatmap is doing and why it's important.")
+  
+  # Heatmap Writeup
+  fluidRow(id="heatmap-analysis",
+    h3("The Resistance Rate Heatmap"),
+    HTML("
+      <p>The todo section here should describe what the heatmap is doing and why it's important.</p>
+      <p style='text-align: center'>
+        <b>Resistance Rate = # of resistant test results / # of tests in the zipcode per the selected filters<br><br>
+        Test Rate = # of tests in the zipcode per the selected filters / # of tests in the state</b>
+      </p>
+    ")
   ),
   hr(),
-  fluidRow(
-    id="autocorrelation-container",
-    column(4,
-           id="autocorrelation-sidebar",
-           class="well",
-           h3("Spatial Autocorrelation"),
-           selectInput(
-             "autocorrelation_microbe",
-             "Microbe:",
-             unique(spatial_autocorrelation$Microbe),
-           ),
-    ),
-    column(8,
-           id = "autocorrelation-output",
-           fluidRow(
-             column(6,
-                    h4("Moran's I"),
-                    htmlOutput("moran"),
-                    plotOutput("moranPlot"),
-             ),
-             column(6,
-                    h4("Geary's C"),
-                    htmlOutput("geary"),
-                    plotOutput("gearyPlot"),
-             ),
-           ),
+  
+  # Autocorrelation UI
+  div(id="autocorrelation-container",
+    div(id="autocorrelation-content",
+      div(id="autocorrelation-sidebar", class="well",
+        h3("Spatial Autocorrelation"),
+        selectInput(
+          "autocorrelation_microbe",
+          "Microbe:",
+          unique(spatial_autocorrelation$Microbe),
+        ),
+      ),
+      div(id = "autocorrelation-output",
+        div(class="autocorrelation-display",
+          h4("Moran's I"),
+          htmlOutput("moran"),
+          plotOutput("moranPlot"),
+        ),
+        div(class="autocorrelation-display",
+          h4("Geary's C"),
+          htmlOutput("geary"),
+          plotOutput("gearyPlot"),
+        ),
+      ),
     ),
   ),
-  fluidRow(
-           id="autocorrelation-analysis",
-           h3("Conclusions"),
-           p("The todo section here should describe what conclusions we can make about the analysis and how these algorithms work.")
+  
+  # Autocorrelation Writeup
+  fluidRow(id="autocorrelation-analysis",
+    h3("Conclusions"),
+    p("The todo section here should describe what conclusions we can make about the analysis and how these algorithms work.")
   ),
 )
 
