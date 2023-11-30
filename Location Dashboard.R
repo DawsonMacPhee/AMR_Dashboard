@@ -53,92 +53,133 @@ valid_zips = df_pop_zip$region
 ui <- fluidPage(
   # CSS Definitions
   tags$head(
-    tags$style(type="text/css", "#heatmap-container { max-width: 1170px; overflow: auto; background-color: #FFEAE0; margin: auto; border-radius: 10px; }"),
+    tags$style(type="text/css", "#heatmap-block { background-color: #E0F5FF; padding: 20px; border-radius: 5px; }"),
+    tags$style(type="text/css", "#heatmap-container { max-width: 1170px; overflow: auto; background-color: #FFEAE0; margin: auto; border-radius: 15px; }"),
     tags$style(type="text/css", "#heatmap-content { display: flex; justify-content: center; width: 1170px; padding: 20px 20px 0px 20px; }"),
     tags$style(type="text/css", "#heatmap-sidebar { height: 525px; max-width: 350px; }"),
     tags$style(type="text/css", "#heatmap-output { width: 800px; }"),
-    tags$style(type="text/css", "#heatmap-analysis { max-width: 1000px; background-color: #FFEAE0; margin: auto; margin-top: 15px; padding: 0px 20px 15px 20px; border-radius: 10px; }"),
-    tags$style(type="text/css", "#autocorrelation-container { max-width: 1124px; overflow: auto; background-color: #E0F5FF; margin: auto; border-radius: 10px; }"),
+    tags$style(type="text/css", "#heatmap-analysis { max-width: 1500px; margin: auto; margin-top: 15px; padding: 0px 20px 15px 20px; }"),
+    tags$style(type="text/css", "#autocorrelation-block { background-color: #FFEAE0; padding: 20px; border-radius: 5px; margin-bottom: 40px; }"),
+    tags$style(type="text/css", "#autocorrelation-container { max-width: 1124px; overflow: auto; background-color: #E0F5FF; margin: auto; border-radius: 15px; }"),
     tags$style(type="text/css", "#autocorrelation-content { display: flex; justify-content: center; width: 1124px; padding: 20px 10px 0px 20px; }"),
     tags$style(type="text/css", "#autocorrelation-sidebar { height: 375px; max-width: 350px; }"),
     tags$style(type="text/css", "#autocorrelation-output { display: flex; height: 375px; margin-left: 10px; }"),
     tags$style(type="text/css", ".autocorrelation-display { overflow: hidden; padding-left: 10px; padding-right: 10px; width: 395px; }"),
-    tags$style(type="text/css", "#autocorrelation-analysis { max-width: 1000px; background-color: #E0F5FF; margin: auto; margin-bottom: 40px; margin-top: 15px; padding: 0px 20px 15px 20px; border-radius: 10px; }"),
+    tags$style(type="text/css", "#autocorrelation-analysis { max-width: 1500px; margin: auto; margin-top: 15px; padding: 0px 20px 15px 20px; }"),
   ),
   titlePanel(title=h1("Are there Trends in Resistance Rates by Location?", align="center")),
   hr(),
   
   # Heatmap UI
-  div(id="heatmap-container",
-    div(id="heatmap-content",
-      div(id="heatmap-sidebar", class="well",
-        h3("Resistance Rate Heatmap"),
-        radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
-        selectInput(
-          "zip",
-          "Zipcode Area:",
-          c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
-          multiple = TRUE,
-          selected = "All"
+  div(id="heatmap-block",
+      
+    # Heatmap
+    div(id="heatmap-container",
+      div(id="heatmap-content",
+        div(id="heatmap-sidebar", class="well",
+          h3("Resistance Rate Heatmap"),
+          radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
+          selectInput(
+            "zip",
+            "Zipcode Area:",
+            c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
+            multiple = TRUE,
+            selected = "All"
+          ),
+          selectInput(
+            "antibiotic",
+            "Antibiotic:",
+            c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
+          ),
+          selectInput(
+            "microbe",
+            "Microbe:",
+            c("All", unique(resistance_rate_microbe$Microbe)),
+          ),
         ),
-        selectInput(
-          "antibiotic",
-          "Antibiotic:",
-          c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
-        ),
-        selectInput(
-          "microbe",
-          "Microbe:",
-          c("All", unique(resistance_rate_microbe$Microbe)),
-        ),
+        div(id="heatmap-output", plotOutput("heatmap")),
       ),
-      div(id="heatmap-output", plotOutput("heatmap")),
+    ),
+  
+    # Heatmap Writeup
+    fluidRow(id="heatmap-analysis",
+      h3("The Resistance Rate Heatmap"),
+      HTML("
+        <p>
+          This exploration tool is a great way to take a peak at how AMR is affecting the state of New York. Seen on the map above, 
+          you're able to examine the resistance and test rates as well as apply filters to take a closer look into whatever zipcodes, 
+          antibiotics, or microbes you're interested in. By toggling through our modes of operations, you get two different maps for 
+          each setting.
+        </p>
+        <p style='text-align: center'>
+          <br><b>Resistance Rate = # of resistant test results / # of tests in the zipcode per the selected filters<br><br>
+          Test Rate = # of tests in the zipcode per the selected filters / # of tests in the state</b><br><br>
+        </p>
+        <p>
+          The Resistance Rate is all about discovering what zipcodes have infections with the highest resistance to antimicrobials. 
+          The Test Rate is all about discovering what zipcodes are testing for AMR the most. The higher the test rate, the more tests 
+          being conducted, and the more you can trust the resistance rate presented (100% resistance in only 5 tests doesn't really 
+          inspire confidence). Be careful though -- note the scale of the heatmap changes from setting to setting! Also, if you want 
+          to see a specific zipcode, you're going to want to remove the 'All' selection in the input by selecting it and pressing delete.
+        </p>
+      ")
     ),
   ),
-  
-  # Heatmap Writeup
-  fluidRow(id="heatmap-analysis",
-    h3("The Resistance Rate Heatmap"),
-    HTML("
-      <p>The todo section here should describe what the heatmap is doing and why it's important.</p>
-      <p style='text-align: center'>
-        <b>Resistance Rate = # of resistant test results / # of tests in the zipcode per the selected filters<br><br>
-        Test Rate = # of tests in the zipcode per the selected filters / # of tests in the state</b>
-      </p>
-    ")
-  ),
-  hr(),
   
   # Autocorrelation UI
-  div(id="autocorrelation-container",
-    div(id="autocorrelation-content",
-      div(id="autocorrelation-sidebar", class="well",
-        h3("Spatial Autocorrelation"),
-        selectInput(
-          "autocorrelation_microbe",
-          "Microbe:",
-          unique(spatial_autocorrelation$Microbe),
+  div(id="autocorrelation-block",
+    # Autocorrelation
+    div(id="autocorrelation-container",
+      div(id="autocorrelation-content",
+        div(id="autocorrelation-sidebar", class="well",
+          h3("Spatial Autocorrelation"),
+          selectInput(
+            "autocorrelation_microbe",
+            "Microbe:",
+            unique(spatial_autocorrelation$Microbe),
+          ),
         ),
-      ),
-      div(id = "autocorrelation-output",
-        div(class="autocorrelation-display",
-          h4("Moran's I"),
-          htmlOutput("moran"),
-          plotOutput("moranPlot"),
-        ),
-        div(class="autocorrelation-display",
-          h4("Geary's C"),
-          htmlOutput("geary"),
-          plotOutput("gearyPlot"),
+        div(id = "autocorrelation-output",
+          div(class="autocorrelation-display",
+            h4("Moran's I"),
+            htmlOutput("moran"),
+            plotOutput("moranPlot"),
+          ),
+          div(class="autocorrelation-display",
+            h4("Geary's C"),
+            htmlOutput("geary"),
+            plotOutput("gearyPlot"),
+          ),
         ),
       ),
     ),
-  ),
   
-  # Autocorrelation Writeup
-  fluidRow(id="autocorrelation-analysis",
-    h3("Conclusions"),
-    p("The todo section here should describe what conclusions we can make about the analysis and how these algorithms work.")
+    # Autocorrelation Writeup
+    fluidRow(id="autocorrelation-analysis",
+      h3("Spatial Autocorrelation"),
+      HTML("
+        <p>
+          The heatmap on its own is a cool way to view and explore the data, but it doesn't really give us a definitive answer as to 
+          whether AMR is spreading or not. For this, we're using two spatial autocorrelation methods -- Moran's I and Geary's C.
+        </p>
+        <p>
+          Above, you're able to run these spatial autocorrelation algorithms for the top 3 microbes with the most tests in the state of New York. 
+          Given your new found knowledge in this matter, you will probably notice that none of these I or C values suggest any significant 
+          evidence of AMR spreading from location to location. To help you visualize this, we conducted both a Hypothesis Test and a Monte 
+          Carlo Simulation. For our Hypothesis Test, tested a null hypothesis of 'There is no correlation from zipcode to zipcode in terms 
+          of resistance rate'. You can see the resulting p values are quite large and don't allow us to reject this hypothesis at any 
+          reasonable level of accuracy. To reject this, we'd need a p value of at least 0.05 or less. Being unable to reject this null hypothesis 
+          suggests that it is correct, and that there is no discernible correlation from zipcode to zipcode in terms of resistance rate. For our 
+          Monte Carlo simulations, we generated 1000 randomly distributed collections of resistance rates and used them to calculate I and C 
+          values. We plotted the density of the random I and C values, which you can see in the curve on the plot. Finally, we added a bar to the 
+          plot showing our I and C value, which for all microbes is located right in the middle of the density of these random distributions. 
+          For this reason, it's safe to say that our I and C values show a random distribution of resistance rates by location.
+        </p>
+        <p>
+          CONCLUSION
+        </p>
+      ")
+    ),
   ),
 )
 
