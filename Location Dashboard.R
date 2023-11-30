@@ -1,4 +1,4 @@
-# Library Loading
+#~~~~~~~~~~~~~~~~~Library Loading~~~~~~~~~~~~~~~~~
 remove(list=ls())
 library(shiny)
 library(ggplot2)
@@ -10,6 +10,7 @@ library(gsubfn)
 library(sf)
 library(spdep)
 
+#~~~~~~~~~~~~~~~~~Defining Functions~~~~~~~~~~~~~~~~~
 expandZip3Level = function(zip, new_value) {
   if (identical(new_value, numeric(0))) new_value = 0
   region = c()
@@ -36,7 +37,7 @@ filterOnResistance = function(data_mode, filtered_rows) {
   output
 }
 
-# Data Loading
+#~~~~~~~~~~~~~~~~~Data Loading~~~~~~~~~~~~~~~~~
 resistance_rate_antibiotic = readRDS("./data/dashboard_data/zip_data_antibiotic_resistance_rate.Rds")
 resistance_rate_microbe = readRDS("./data/dashboard_data/zip_data_microbe_resistance_rate.Rds")
 test_rate_antibiotic = readRDS("./data/dashboard_data/zip_data_antibiotic_test_rate.Rds")
@@ -48,21 +49,23 @@ spatial_weights = readRDS("./data/dashboard_data/spatial_autocorrelation_weights
 data("df_pop_zip")
 valid_zips = df_pop_zip$region
 
-# Setting up R-Shiny Window
+#~~~~~~~~~~~~~~~~~Setting up R-Shiny UI~~~~~~~~~~~~~~~~~
 ui <- fluidPage(
   tags$head(
     tags$style(type="text/css", "#heatmap-container { max-width: 1250px; background-color: #FFEAE0; margin: auto; padding: 20px 20px 0px 20px; border-radius: 10px; overflow: auto; }"),
-    tags$style(type="text/css", "#heatmap { height: 525px; max-width: 350px; }"),
-    tags$style(type="text/css", "#heatmap-analysis-container { max-width: 1000px; background-color: #FFEAE0; margin: auto; padding: 0px 20px 15px 20px; border-radius: 10px; margin-top: 15px; }"),
+    tags$style(type="text/css", "#heatmap-sidebar { height: 525px; max-width: 350px; }"),
+    tags$style(type="text/css", "#heatmap-analysis { max-width: 1000px; background-color: #FFEAE0; margin: auto; padding: 0px 20px 15px 20px; border-radius: 10px; margin-top: 15px; }"),
+    tags$style(type="text/css", "#autocorrelation-container { max-width: 1250px; background-color: #E0F5FF; margin: auto; padding: 20px 20px 0px 20px; border-radius: 10px; overflow: auto; }"),
     tags$style(type="text/css", "#autocorrelation-sidebar { height: 375px; max-width: 350px; }"),
-    tags$style(type="text/css", "#autocorrelation-output { height: 375px;}"),
+    tags$style(type="text/css", "#autocorrelation-output { height: 375px; overflow: hidden; margin-left: 35px; }"),
+    tags$style(type="text/css", "#autocorrelation-analysis { max-width: 1000px; background-color: #E0F5FF; margin: auto; margin-bottom: 40px; padding: 0px 20px 15px 20px; border-radius: 10px; margin-top: 15px; }"),
   ),
   titlePanel(title=h1("Are there Trends in Resistance Rates by Location?", align="center")),
   hr(),
   fluidRow(
     id="heatmap-container",
     column(4,
-           id="heatmap",
+           id="heatmap-sidebar",
            class="well",
            h3("Resistance Rate Heatmap"),
            radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
@@ -87,37 +90,44 @@ ui <- fluidPage(
     column(8, plotOutput("heatmap")),
   ),
   fluidRow(
-    id="heatmap-analysis-container",
+    id="heatmap-analysis",
     h3("Data Analysis"),
-    p("The todo section here should discribe what the heatmap is doing and why it's important.")
+    p("The todo section here should describe what the heatmap is doing and why it's important.")
   ),
   hr(),
   fluidRow(
-    sidebarPanel(id="autocorrelation-sidebar",
-                 h3("Spatial Autocorrelation"),
-                 selectInput(
-                   "autocorrelation_microbe",
-                   "Microbe:",
-                   unique(spatial_autocorrelation$Microbe),
-                 ),
+    id="autocorrelation-container",
+    column(4,
+           id="autocorrelation-sidebar",
+           class="well",
+           h3("Spatial Autocorrelation"),
+           selectInput(
+             "autocorrelation_microbe",
+             "Microbe:",
+             unique(spatial_autocorrelation$Microbe),
+           ),
     ),
-    mainPanel(
-      id = "autocorrelation-output",
-      fluidRow(
-        column(6,
-            h4("Moran's I"),
-            htmlOutput("moran"),
-            plotOutput("moranPlot"),
-        ),
-        column(6,
-            h4("Geary's C"),
-            htmlOutput("geary"),
-            plotOutput("gearyPlot"),
-        ),
-      ),
+    column(8,
+           id = "autocorrelation-output",
+           fluidRow(
+             column(6,
+                    h4("Moran's I"),
+                    htmlOutput("moran"),
+                    plotOutput("moranPlot"),
+             ),
+             column(6,
+                    h4("Geary's C"),
+                    htmlOutput("geary"),
+                    plotOutput("gearyPlot"),
+             ),
+           ),
     ),
   ),
-  fluidRow(h3("Conclusions")),
+  fluidRow(
+           id="autocorrelation-analysis",
+           h3("Conclusions"),
+           p("The todo section here should describe what conclusions we can make about the analysis and how these algorithms work.")
+  ),
 )
 
 server <- function(input,output) {
@@ -283,7 +293,7 @@ server <- function(input,output) {
     geary.mc(as.numeric(spatial_autocorrelation$ResistanceRate[spatial_autocorrelation$Microbe == input$autocorrelation_microbe]), spatial_weights, nsim = 999, alternative = "greater", zero.policy=TRUE)
   })
   
-  #~~~~~~~~~~~~~~~~~Define Plots~~~~~~~~~~~~~~~~~
+  #~~~~~~~~~~~~~~~~~Define Outputs~~~~~~~~~~~~~~~~~
   output$heatmap = renderPlot({
     if ("All" %in% input$zip) {
       zip_choropleth(heatmapData(), 
@@ -291,7 +301,7 @@ server <- function(input,output) {
                      legend     = "Percentage of Resistant Tests") + 
         theme(
           plot.background = element_rect(fill="#FFEAE0", color="#FFEAE0"),
-          text = element_text(size=15),
+          text = element_text(size=16),
           panel.border = element_blank()
         )
     } else {
@@ -302,23 +312,23 @@ server <- function(input,output) {
                      legend     = "Percentage of Resistant Tests") + 
         theme(
           plot.background = element_rect(fill="#FFEAE0", color="#FFEAE0"),
-          text = element_text(size=15),
+          text = element_text(size=16),
           panel.border = element_blank()
         )
     }
-  }, height = 486, width = 800)
+  }, height = 477, width = 800, bg="#FFEAE0")
   
   output$moran = renderUI({ HTML(moranAnalysis()) })
   
   output$moranPlot = renderPlot({ 
     plot(moranSimulation(), xlab="Moran's I")
-  }, height = 262, width = 375)
+  }, height = 275, width = 375)
   
   output$geary = renderUI({ HTML(gearyAnalysis()) })
   
   output$gearyPlot = renderPlot({ 
     plot(gearySimulation(), xlab="Geary's C")
-  }, height = 262, width = 375)
+  }, height = 275, width = 375)
 }
 
 shinyApp(ui, server)
