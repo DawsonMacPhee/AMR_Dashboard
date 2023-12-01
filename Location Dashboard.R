@@ -169,7 +169,7 @@ ui <- fluidPage(
          <!--IMAGE OF FORMULAS-->
          <p>
            These algorithms are all about the comparison of correlated data and random data. See the number lines below to understand what the I and C 
-           values actually mean. The are very similar at their core, but shifted and inverted compared to eachother. The more extreme the I and C values get, 
+           values actually mean. They are very similar at their core, but shifted and inverted compared to eachother. The more extreme the I and C values get, 
            the greater the likelihood of a positive or negative correlation actually existing in the data.
          </p>
          <!--IMAGE OF NUMBER LINES-->
@@ -177,7 +177,7 @@ ui <- fluidPage(
            Above, you're able to run these spatial autocorrelation algorithms for the top 3 microbes with the most tests in the state of New York. 
            Given your new found knowledge in this matter, you will probably notice that none of these I or C values suggest any significant 
            evidence of AMR spreading from location to location. To help you visualize this, we conducted both a Hypothesis Test and a Monte 
-           Carlo Simulation. For our Hypothesis Test, tested a null hypothesis of 'There is no correlation from zipcode to zipcode in terms 
+           Carlo Simulation. For our Hypothesis Test, we tested a null hypothesis of 'There is no correlation from zipcode to zipcode in terms 
            of resistance rate'. You can see the resulting p values are quite large and don't allow us to reject this hypothesis at any 
            reasonable level of accuracy. To reject this, we'd need a p value of at least 0.05 or less. Being unable to reject this null hypothesis 
            suggests that it is correct, and that there is no discernible correlation from zipcode to zipcode in terms of resistance rate. For our 
@@ -188,7 +188,12 @@ ui <- fluidPage(
         </p>
         <p>
           According to the analysis we have conducted here, both Moran's I and Geary's C values suggest that there is no linear or non-linear correlation 
-          in resistance rate by location.
+          in resistance rate by location. This tells us that given the data we have access to, there may be a correlation between the antibiotic tiers 
+          effectively reducing the resistance rate, and the lack of AMR spreading from zipcode to zipcode. Key word - given the data we have 
+          access to. Different vets are testing AMR to varrying degrees with labs that have various standards and tolerance levels. Additionally, with only 
+          49 distinct zipcode areas in the data, we don't have a very large area to analyize. The presence of spatial correlation would have told us more 
+          than the lack of correlation does (it's much easier to show something definitively exists than show it doesn't). Instead, we think more locations 
+          and data points in those locations would help provide us with better context before we can confirm there is truely no correlation.
         </p>
       ")
     ),
