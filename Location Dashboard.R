@@ -53,14 +53,14 @@ valid_zips = df_pop_zip$region
 ui <- fluidPage(
   # CSS Definitions
   tags$head(
-    tags$style(type="text/css", "#heatmap-block { background-color: #E0F5FF; padding: 20px; border-radius: 5px; }"),
-    tags$style(type="text/css", "#heatmap-container { max-width: 1170px; overflow: auto; background-color: #FFEAE0; margin: auto; border-radius: 15px; }"),
+    tags$style(type="text/css", "#heatmap-block { background-color: #a9c5d1; padding: 20px; border-radius: 5px; }"),
+    tags$style(type="text/css", "#heatmap-container { max-width: 1170px; overflow: auto; background-color: #bfe0c3; margin: auto; border-radius: 15px; }"),
     tags$style(type="text/css", "#heatmap-content { display: flex; justify-content: center; width: 1170px; padding: 20px 20px 0px 20px; }"),
     tags$style(type="text/css", "#heatmap-sidebar { height: 525px; max-width: 350px; }"),
     tags$style(type="text/css", "#heatmap-output { width: 800px; }"),
     tags$style(type="text/css", "#heatmap-analysis { max-width: 1500px; margin: auto; margin-top: 15px; padding: 0px 20px 15px 20px; }"),
-    tags$style(type="text/css", "#autocorrelation-block { background-color: #FFEAE0; padding: 20px; border-radius: 5px; margin-bottom: 40px; }"),
-    tags$style(type="text/css", "#autocorrelation-container { max-width: 1124px; overflow: auto; background-color: #E0F5FF; margin: auto; border-radius: 15px; }"),
+    tags$style(type="text/css", "#autocorrelation-block { background-color: #bfe0c3; padding: 20px; border-radius: 5px; margin-bottom: 40px; }"),
+    tags$style(type="text/css", "#autocorrelation-container { max-width: 1124px; overflow: auto; background-color: #a9c5d1; margin: auto; border-radius: 15px; }"),
     tags$style(type="text/css", "#autocorrelation-content { display: flex; justify-content: center; width: 1124px; padding: 20px 10px 0px 20px; }"),
     tags$style(type="text/css", "#autocorrelation-sidebar { height: 375px; max-width: 350px; }"),
     tags$style(type="text/css", "#autocorrelation-output { display: flex; height: 375px; margin-left: 10px; }"),
@@ -106,6 +106,21 @@ ui <- fluidPage(
       h3("The Resistance Rate Heatmap"),
       HTML("
         <p>
+          This exploration tool is a great way to take a peak at how AMR is affecting the state of New York. Seen on the map above, 
+           you're able to examine the resistance and test rates as well as apply filters to take a closer look into whatever zipcodes, 
+           antibiotics, or microbes you're interested in. By toggling through our modes of operations, you get two different maps for 
+           each setting.
+         </p>
+         <p style='text-align: center'>
+           <br><b>Resistance Rate = # of resistant test results / # of tests in the zipcode per the selected filters<br><br>
+           Test Rate = # of tests in the zipcode per the selected filters / # of tests in the state</b><br><br>
+         </p>
+         <p>
+           The Resistance Rate is all about discovering what zipcodes have infections with the highest resistance to antimicrobials. 
+           The Test Rate is all about discovering what zipcodes are testing for AMR the most. The higher the test rate, the more tests 
+           being conducted, and the more you can trust the resistance rate presented (100% resistance in only 5 tests doesn't really 
+           inspire confidence). Be careful though -- note the scale of the heatmap changes from setting to setting! Also, if you want 
+           to see a specific zipcode, you're going to want to remove the 'All' selection in the input by selecting it and pressing delete.
         </p>
       ")
     ),
@@ -143,11 +158,37 @@ ui <- fluidPage(
     fluidRow(id="autocorrelation-analysis",
       h3("Spatial Autocorrelation"),
       HTML("
-        <p>
-          y location.
+         <p>
+           The heatmap on its own is a cool way to view and explore the data, but it doesn't really give us a definitive answer as to 
+           whether AMR is spreading or not. For this, we're using two spatial autocorrelation methods -- Moran's I and Geary's C. Moran's I 
+           is better for linear data, while Gearcy's C is better for non-linear data. By implementing both we will improve our results and analysis. To 
+           calculate these values, we take the resistance rate of each zipcode, and compare it to each of its neighbouring zipcodes. Then, 
+           we generate weight values that represents the relationship between a zipcode and each of its neighbouring areas. Those weight values are 
+           used in two different formulas to calculate an I and C value that represents the entire state.
+         </p>
+         <!--IMAGE OF FORMULAS-->
+         <p>
+           These algorithms are all about the comparison of correlated data and random data. See the number lines below to understand what the I and C 
+           values actually mean. The are very similar at their core, but shifted and inverted compared to eachother. The more extreme the I and C values get, 
+           the greater the likelihood of a positive or negative correlation actually existing in the data.
+         </p>
+         <!--IMAGE OF NUMBER LINES-->
+         <p>
+           Above, you're able to run these spatial autocorrelation algorithms for the top 3 microbes with the most tests in the state of New York. 
+           Given your new found knowledge in this matter, you will probably notice that none of these I or C values suggest any significant 
+           evidence of AMR spreading from location to location. To help you visualize this, we conducted both a Hypothesis Test and a Monte 
+           Carlo Simulation. For our Hypothesis Test, tested a null hypothesis of 'There is no correlation from zipcode to zipcode in terms 
+           of resistance rate'. You can see the resulting p values are quite large and don't allow us to reject this hypothesis at any 
+           reasonable level of accuracy. To reject this, we'd need a p value of at least 0.05 or less. Being unable to reject this null hypothesis 
+           suggests that it is correct, and that there is no discernible correlation from zipcode to zipcode in terms of resistance rate. For our 
+           Monte Carlo simulations, we generated 1000 randomly distributed collections of resistance rates and used them to calculate I and C 
+           values. We plotted the density of the random I and C values, which you can see in the curve on the plot. Finally, we added a bar to the 
+           plot showing our I and C value, which for all microbes is located right in the middle of the density of these random distributions. 
+           For this reason, it's safe to say that our I and C values show a random distribution of resistance rates by location.
         </p>
         <p>
-          CONCLUSION
+          According to the analysis we have conducted here, both Moran's I and Geary's C values suggest that there is no linear or non-linear correlation 
+          in resistance rate by location.
         </p>
       ")
     ),
@@ -324,7 +365,7 @@ server <- function(input,output) {
                      state_zoom = "new york", 
                      legend     = "Percentage of Resistant Tests") + 
         theme(
-          plot.background = element_rect(fill="#FFEAE0", color="#FFEAE0"),
+          plot.background = element_rect(fill="#bfe0c3", color="#bfe0c3"),
           text = element_text(size=16),
           panel.border = element_blank()
         )
@@ -335,12 +376,12 @@ server <- function(input,output) {
                      zip_zoom = unique(df$region),
                      legend     = "Percentage of Resistant Tests") + 
         theme(
-          plot.background = element_rect(fill="#FFEAE0", color="#FFEAE0"),
+          plot.background = element_rect(fill="#bfe0c3", color="#bfe0c3"),
           text = element_text(size=16),
           panel.border = element_blank()
         )
     }
-  }, height = 477, width = 800, bg="#FFEAE0")
+  }, height = 477, width = 800, bg="#bfe0c3")
   
   output$moran = renderUI({ HTML(moranAnalysis()) })
   
