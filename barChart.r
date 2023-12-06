@@ -5,7 +5,7 @@ shiny_version <- packageVersion("shiny")
 print(shiny_version)
 
 # Load the dataset
-data <- read.csv("/Users/aliasjad/Documents/CIS*4020/converted.csv", stringsAsFactors = FALSE)
+data <- read.csv("/data/raw_data/data.csv", stringsAsFactors = FALSE)
 
 # Data cleaning and preparation
 antibiotic_columns <- grep("R1|H1|W1|N5|N3|I2|E1|O1|N4|N6|N2|B1|Z1|W2|Z2|F1|M2|T1|K1|D1|S1|D3|E2|B2|L1|O2|W4|H3|H4|X1|T2|Z4|U1|Z3|W5|J1|O3|V1|I1|G1|A1|R3|FUCIDIC ACID|B3|D4|H2|CEFOPERAZONE|N1|C1|R2|P1|D2|W3|Q1|H5|M1|Y1", names(data), value = TRUE)
