@@ -1,14 +1,4 @@
 #~~~~~~~~~~~~~~~~~Library Loading~~~~~~~~~~~~~~~~~
-remove(list=ls())
-library(shiny)
-library(ggplot2)
-library(reshape2)
-library(devtools)
-library(choroplethrZip)
-library(stringr)
-library(gsubfn)
-library(sf)
-library(spdep)
 
 #~~~~~~~~~~~~~~~~~Defining Functions~~~~~~~~~~~~~~~~~
 expandZip3Level = function(zip, new_value) {
@@ -50,7 +40,9 @@ data("df_pop_zip")
 valid_zips = df_pop_zip$region
 
 #~~~~~~~~~~~~~~~~~Setting up R-Shiny UI~~~~~~~~~~~~~~~~~
-ui <- fluidPage(
+location_ui <- function(id) {
+ns <- NS(id)
+fluidPage(
   # CSS Definitions
   tags$head(
     tags$style(type="text/css", "#heatmap-block { background-color: #a9c5d1; padding: 20px; border-radius: 5px; }"),
@@ -83,26 +75,26 @@ ui <- fluidPage(
       div(id="heatmap-content",
         div(id="heatmap-sidebar", class="well",
           h3("Resistance Rate Heatmap"),
-          radioButtons("data_mode", "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test")),
+          radioButtons(ns("data_mode"), "Mode of Operation:", c("Resistance Rate" = "resistance", "Test Rate" = "test"), selected = "resistance"),
           selectInput(
-            "zip",
+            ns("zip"),
             "Zipcode Area:",
             c("All", paste(sort(unique(resistance_rate_antibiotic$Zip)), "00", sep="")),
             multiple = TRUE,
             selected = "All"
           ),
           selectInput(
-            "antibiotic",
+            ns("antibiotic"),
             "Antibiotic:",
             c("All", "Tier 1", "Tier 2", "Tier 3", unique(resistance_rate_antibiotic$Antibiotic)),
           ),
           selectInput(
-            "microbe",
+            ns("microbe"),
             "Microbe:",
             c("All", unique(resistance_rate_microbe$Microbe)),
           ),
         ),
-        div(id="heatmap-output", plotOutput("heatmap")),
+        div(id="heatmap-output", plotOutput(ns("heatmap"))),
       ),
     ),
   
@@ -139,7 +131,7 @@ ui <- fluidPage(
         div(id="autocorrelation-sidebar", class="well",
           h3("Spatial Autocorrelation"),
           selectInput(
-            "autocorrelation_microbe",
+            ns("autocorrelation_microbe"),
             "Microbe:",
             unique(spatial_autocorrelation$Microbe),
           ),
@@ -148,12 +140,12 @@ ui <- fluidPage(
           div(class="autocorrelation-display",
             h4("Moran's I"),
             htmlOutput("moran"),
-            plotOutput("moranPlot"),
+            plotOutput(ns("moranPlot")),
           ),
           div(class="autocorrelation-display",
             h4("Geary's C"),
             htmlOutput("geary"),
-            plotOutput("gearyPlot"),
+            plotOutput(ns("gearyPlot")),
           ),
         ),
       ),
@@ -232,17 +224,23 @@ ui <- fluidPage(
     ),
   ),
 )
+}
 
-server <- function(input,output) {
+location_server <- function(id) {
+moduleServer (id, function(input,output, session) {
   #~~~~~~~~~~~~~~~~~Define Reactive Vars~~~~~~~~~~~~~~~~~
   heatmapData = reactive({
     # Set mode filter
-    if (input$data_mode == "resistance") {
-      data_antibiotic = resistance_rate_antibiotic
-      data_microbe = resistance_rate_microbe
+    if(!is.null(input$data_mode)) {
+      if (input$data_mode == "resistance") {
+        data_antibiotic = resistance_rate_antibiotic
+        data_microbe = resistance_rate_microbe
+      } else {
+        data_antibiotic = test_rate_antibiotic
+        data_microbe = test_rate_microbe
+      }
     } else {
-      data_antibiotic = test_rate_antibiotic
-      data_microbe = test_rate_microbe
+      print(paste("Data mode: fuck", input$data_mode))
     }
     
     # Set zip filter
@@ -432,6 +430,7 @@ server <- function(input,output) {
   output$gearyPlot = renderPlot({ 
     plot(gearySimulation(), xlab="Geary's C")
   }, height = 275, width = 375)
+})
 }
 
-shinyApp(ui, server)
+shinyApp(ui = location_ui, server = location_server)

@@ -1,7 +1,4 @@
-library(shiny)
-library(ggplot2)
-library(data.table)
-library(dplyr)
+
 
 # INITIAL DATA SETUP
 full_data <- readRDS("./data/dashboard_data/full_data.rds")
@@ -44,16 +41,18 @@ createSummaryData <- function(aggregated_data, selected_tiers) {
 }
 
 # R SHINY UI SETUP
-ui <- fluidPage(
+tierTrend_ui <- function(id) {
+ns <- NS(id)
+fluidPage(
   titlePanel("Analysis of Resistance Trends Over Time"),
   fluidRow(
     sidebarLayout(
       sidebarPanel(
-        selectInput("antimicrobial", "Select Antomicrobial(s)", choices = antimicrobial_choices, multiple = FALSE),
-        selectInput("microbes", "Select Tested Microbe(s)", choices = c("ALL", microbes_choices), multiple = TRUE),
+        selectInput(ns("antimicrobial"), "Select Antomicrobial(s)", choices = antimicrobial_choices, multiple = FALSE),
+        selectInput(ns("microbes"), "Select Tested Microbe(s)", choices = c("ALL", microbes_choices), multiple = TRUE),
       ),
       mainPanel(
-        plotOutput("ratioScatterPlot"),
+        plotOutput(ns("ratioScatterPlot")),
       )
     )
   ),
@@ -78,7 +77,7 @@ ui <- fluidPage(
     )
   ),
   fluidRow(
-    plotOutput("residualPlot"),
+    plotOutput(ns("residualPlot")),
     verbatimTextOutput("residualValue"),
     
   ),
@@ -116,9 +115,11 @@ ui <- fluidPage(
     )
   ),
 )
+}
 
 # SERVER FUNCTION
-server <- function(input, output) {
+tierTrend_server <- function(id){
+moduleServer(id, function(input, output, session) {
   output$ratioScatterPlot <- renderPlot({
     selected_antimicrobials <- getSelectedTiers(input)
     dataSubset <- full_data[pseud_drug %in% selected_antimicrobials]
@@ -180,7 +181,8 @@ server <- function(input, output) {
     # Print the deviance ratio
     cat("Deviance Ratio:", deviance_ratio)
   })
+})
 }
 
 # LAUNCHING SHINY APP
-shinyApp(ui, server)
+shinyApp(ui = tierTrend_ui, server = tierTrend_server)
