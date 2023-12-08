@@ -37,6 +37,7 @@ ui <- fluidPage(
                  with our different sections and read our conclusions, inviting you to make your own assessment of the data and inform your knowledge of this incredibly important topic."),
                 p("NOTE: If you are interested in reading our sources and exploring the content more, please reference our Literature Review section for a full list of sources and references.")
             ),
+            br(),
             plotOutput("allResistancePlots", width = "100%")
         ),
 
