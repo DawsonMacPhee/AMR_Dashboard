@@ -55,7 +55,7 @@ literatureReview_ui <- function(id) {
   )
 }
 
+# Include server function because UI will not run without
 literatureReviewServer <- function(input, output, session) {}
 
-# Run the app with the new UI
 shinyApp(ui = literatureReview_ui, server = literatureReviewServer)

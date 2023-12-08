@@ -1,5 +1,3 @@
-
-
 # INITIAL DATA SETUP
 full_data <- readRDS("./data/dashboard_data/full_data.rds")
 aggregated_data <- readRDS("./data/dashboard_data/aggregated_data.rds")
@@ -26,15 +24,15 @@ getSelectedTiers <- function(input) {
 
 createSummaryData <- function(aggregated_data, selected_tiers) {
   aggregated_data %>%
-    filter(pseud_drug %in% selected_tiers) %>%
+    filter(pseud_drug %in% selected_tiers) %>% # filter out unselected tiers
     group_by(tier, year_month) %>%
     summarize(
-      resistant_counts = sum(count[resistance_category == "R"]),
-      total_counts = sum(count),
-      proportion_resistant = resistant_counts / total_counts,
+      resistant_counts = sum(count[resistance_category == "R"]), # num resistant cases
+      total_counts = sum(count), # num of total cases
+      proportion_resistant = resistant_counts / total_counts, # ratio of resistant/total cases
       .groups = 'drop'
     ) %>%
-    ungroup() %>%
+    # use year_month to calculate months_since_start
     mutate(year_month = as.Date(year_month),
            months_since_start = 12 * (as.numeric(format(year_month, "%Y")) - as.numeric(format(min(year_month), "%Y"))) +
              (as.numeric(format(year_month, "%m")) - as.numeric(format(min(year_month), "%m"))))
@@ -44,7 +42,8 @@ createSummaryData <- function(aggregated_data, selected_tiers) {
 tierTrend_ui <- function(id) {
 ns <- NS(id)
 fluidPage(
-  titlePanel("Analysis of Resistance Trends Over Time"),
+  titlePanel(title=h1("Analysis Of Resistance Trends Over Time", align="center")),
+  hr(),
   fluidRow(
     sidebarLayout(
       sidebarPanel(
@@ -73,17 +72,18 @@ fluidPage(
              may help create more informed decisions regarding antimicrobaisls 
              to use, so that higher tier antimicrobials are not being used when
              lower tier ones will suffice."),
+           p("Change the selected Antomicrobial Tier in order to show the test for that tiers specific resistances against all microbes"),
            hr()
     )
   ),
   fluidRow(
     plotOutput(ns("residualPlot")),
-    verbatimTextOutput("residualValue"),
+    verbatimTextOutput(ns("residualValue")),
     
   ),
   fluidRow(
     column(12,
-           h4("Residual Plot/Deviance Test for goodness of fit"),
+           h4("Residual Plot/Deviance Test For Goodness-Of-Fit"),
            p("Since the poission model is best for data that is 'equi-dispersed', 
              meaning that the data's variance is approximately equal to its mean.
              One common way to test a dataset's goodness-of-fit for poisson
@@ -97,11 +97,11 @@ fluidPage(
     )
   ),
   fluidRow(
-    verbatimTextOutput("modelSummary")
+    verbatimTextOutput(ns("modelSummary"))
   ),
   fluidRow(
     column(12,
-           h4("Poission Regression Explanation"),
+           h4("Poission Regression Results & Explanation"),
            p("Seeing as the data we are trying to model is countable data (i.e. 
              the number of resistant test cases), and that in at least one 
              subset the data is equi-dispersed, poission regression stands out
@@ -109,9 +109,11 @@ fluidPage(
              trending over time. With the dependent variable as the count data,
              and time as the independent variable, we can create a model that can
              possibly confirm if there are the changes in AMR over time."),
-           p("In this case, although the data meets the criteria for linear regression,
+           p("In the case of this analysis, although the data meets the criteria for linear regression (for Tier 3),
              it fails to reach significance and thus fails to disprove the null hypothesis 
-             that AMR does not have a significant relationship with time")
+             that AMR does not have a significant relationship with time"),
+           p("Change the selected Antomicrobial Tier in order to show the regression test for that tiers specific resistances over time against all microbes"),
+           
     )
   ),
 )
@@ -122,13 +124,13 @@ tierTrend_server <- function(id){
 moduleServer(id, function(input, output, session) {
   output$ratioScatterPlot <- renderPlot({
     selected_antimicrobials <- getSelectedTiers(input)
-    dataSubset <- full_data[pseud_drug %in% selected_antimicrobials]
+    selected_antimicrobial_subset <- full_data[pseud_drug %in% selected_antimicrobials]
     if (!("ALL" %in% input$microbes)) {
-      dataSubset <- dataSubset[org_standard %in% input$microbes]
+      selected_antimicrobial_subset <- selected_antimicrobial_subset[org_standard %in% input$microbes]
     }
-    dataSubset[, date := as.Date(paste(order_year, order_month, "01", sep = "-"), format = "%Y-%m-%d")]
-    dataSubset[, ratio := sum(resistance_category == "R") / .N, by = date]
-    ggplot(dataSubset, aes(x = date, y = ratio)) +
+    selected_antimicrobial_subset[, date := as.Date(paste(order_year, order_month, "01", sep = "-"), format = "%Y-%m-%d")]
+    selected_antimicrobial_subset[, ratio := sum(resistance_category == "R") / .N, by = date]
+    ggplot(selected_antimicrobial_subset, aes(x = date, y = ratio)) +
       geom_point() +
       geom_line() +
       ylim(0, 1) +
@@ -164,7 +166,7 @@ moduleServer(id, function(input, output, session) {
     
     poisson_model_with_offset <- glm(resistant_counts ~ months_since_start + offset(log(total_counts)), 
                                      family = "poisson", data = summary_data)
-    summary(poisson_model_with_offset)
+    summary(poisson_model_with_offset)$coefficients
   })
   
   output$residualValue <- renderPrint({
