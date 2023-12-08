@@ -53,17 +53,16 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
     create_pie_chart <- function(tier) {
-        tier_resistance_data <- resistance_rate_antibiotic %>%
-        group_by(Tier, ResistanceLevel) %>%
-        summarise(Count = n(), .groups = 'drop')
+        tier_resistance_data = resistance_rate_antibiotic[resistance_rate_antibiotic$Tier == tier,]
+        total_count_in_tier = sum(as.numeric(tier_resistance_data$AntibioticFrequencyCount))
+        percents = c(
+          sum(as.numeric(tier_resistance_data$AntibioticFrequencyCount[tier_resistance_data$ResistanceLevel == "R"])) / total_count_in_tier,
+          sum(as.numeric(tier_resistance_data$AntibioticFrequencyCount[tier_resistance_data$ResistanceLevel == "I"])) / total_count_in_tier,
+          sum(as.numeric(tier_resistance_data$AntibioticFrequencyCount[tier_resistance_data$ResistanceLevel == "S"])) / total_count_in_tier
+        )
+        tier_resistance_data = data.frame(Percents = percents, ResistanceLevel = c("R", "I", "S"))
 
-        tier_resistance_data <- tier_resistance_data %>%
-        group_by(Tier) %>%
-        mutate(TotalCount = sum(Count)) %>%
-        ungroup() %>%
-        mutate(Proportion = Count / TotalCount)
-
-        ggplot(tier_resistance_data, aes(x = "", y = Proportion, fill = ResistanceLevel)) +
+        ggplot(tier_resistance_data, aes(x = "", y = Percents, fill = ResistanceLevel)) +
         geom_bar(width = 1, stat = "identity") +
         coord_polar("y", start = 0) +
         theme_void() +
