@@ -1,5 +1,7 @@
+# IMPORTANT - Run this on first launch if you don't have the choroplethrZip library installed
+#install_github('arilamstein/choroplethrZip@v1.5.0')
+
 library(shiny)
-# remove(list=ls())
 library(ggplot2)
 library(reshape2)
 library(devtools)
